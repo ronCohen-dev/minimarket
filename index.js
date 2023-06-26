@@ -2,39 +2,68 @@ const http = require("http");
 const fs = require("fs");
 const url = require("url");
 const { log } = require("console");
+// import function from anather place dir
+const replaceTemplate = require('./modules/replaceTemplate.js')
 
-// this exacute just one time so its can be Sync function 
-const data = fs.readFileSync(`${__dirname}/dev-data/data.json`,'utf-8',(err,data) =>{
-    const dataObject = JSON.parse(data);
-   
- });
+
+// this exacute just one time so its can be Sync function
+const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, "utf-8");
+const tempOverview = fs.readFileSync(
+  `${__dirname}/templates/overview.html`,
+  "utf-8"
+);
+const tempProducte = fs.readFileSync(
+  `${__dirname}/templates/product.html`,
+  "utf-8"
+);
+const tempCard = fs.readFileSync(`${__dirname}/templates/card.html`, "utf-8");
+
+const dataObject = JSON.parse(data);
+
+
 
 // creating a server
 const server = http.createServer((req, res) => {
-    console.log(req.url);
 
-    const pathName = req.url;
-    if(pathName === '/' || pathName === '/overview'){
-      res.end('This is the OVERVIEW page');
+    const {pathname , query} = url.parse(req.url,true);
 
-    }else if(pathName === '/product'){
-        res.end('This is the PRODUCT page');
+  // overview page
+  if (pathname === "/" || pathname === "/overview") {
+    res.writeHead(200, {
+      "Content-type": "text/html",
+    });
+    // this ' .join('') ' to return String object
+    const cardsHtml = dataObject
+      .map((element) => replaceTemplate(tempCard, element))
+      .join("");
+    const output = tempOverview.replace("{%PRODUCT_CARDS%}", cardsHtml);
+    res.end(output);
 
-    }else if(pathName === '/api'){
-            res.writeHead(200,{
-                'Content-type': 'application/json'});
-           res.end(data);
-    }else{
-         // can send here any headers i want 
-        res.writeHead(404 , {
-            'Content-type': 'text/html',
-           
+    // product page
+  } else if (pathname === "/product") {
+    res.writeHead(200, {
+        "Content-type": "text/html",
+      });
+      // getting the product with the spacific id from query path ver
+    const product = dataObject[query.id];
+      const output = replaceTemplate(tempProducte , product);
+    res.end(output);
 
-        });
-        // res.end('404 page not found :( ')
-        res.end('<h1>404 page not found :( </h1>')
-    }
-   
+    // api page
+  } else if (pathname === "/api") {
+    res.writeHead(200, {
+      "Content-type": "application/json",
+    });
+    res.end(data);
+  } else {
+    // not found page
+    // can send here any headers i want
+    res.writeHead(404, {
+      "Content-type": "text/html",
+    });
+    // res.end('404 page not found :( ')
+    res.end("<h1>404 page not found :( </h1>");
+  }
 });
 
 server.listen(8000, () => {
